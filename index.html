@@ -117,10 +117,28 @@
         <div class="auto-close">Se cierra en <span id="countdown">3</span> segundos</div>
     </div>
 
+    <!-- Audio elements (hidden) -->
+    <audio id="clock-in-sound" preload="auto">
+        <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" type="audio/ogg">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA" type="audio/wav">
+    </audio>
+
+    <audio id="clock-out-sound" preload="auto">
+        <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_short.ogg" type="audio/ogg">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA" type="audio/wav">
+    </audio>
+
+    <audio id="error-sound" preload="auto">
+        <source src="https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg" type="audio/ogg">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA" type="audio/wav">
+    </audio>
+
     <script>
         // Get data from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const employeeId = urlParams.get('employee') || 'DR001';
+        const status = urlParams.get('status');
+        const action = urlParams.get('action');
         
         // Employee data (normally from Supabase)
         const employees = {
@@ -129,9 +147,36 @@
             'DR003': 'Juan'
         };
 
-        // Clock status from webhook response
-        const clockStatus = urlParams.get('status') || 'in';
+        // Determine clock status from URL parameters
+        let clockStatus = 'in';
+        if (status === 'success' && action === 'CLOCK_OUT') {
+            clockStatus = 'out';
+        } else if (status === 'success' && action === 'CLOCK_IN') {
+            clockStatus = 'in';
+        } else if (urlParams.get('status') === 'out') {
+            clockStatus = 'out';
+        }
+
         const employeeName = employees[employeeId] || 'Empleado';
+
+        // Audio control function
+        function playSound(soundType) {
+            try {
+                const audio = document.getElementById(soundType + '-sound');
+                if (audio) {
+                    audio.volume = 0.3; // Gentle volume for coffee shop
+                    const playPromise = audio.play();
+                    
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            console.log('Audio play failed:', error);
+                        });
+                    }
+                }
+            } catch (e) {
+                console.log('Audio error:', e);
+            }
+        }
 
         // Set current time (24h format, Madrid timezone)
         const now = new Date();
@@ -154,11 +199,15 @@
             statusText.textContent = 'CLOCK IN';
             welcomeText.textContent = `¡Hola ${employeeName}!`;
             pageBody.classList.add('clock-in');
+            // Play clock-in sound after a brief delay
+            setTimeout(() => playSound('clock-in'), 200);
         } else {
             statusIcon.textContent = '👋';
             statusText.textContent = 'CLOCK OUT';
             welcomeText.textContent = `¡Adiós ${employeeName}!`;
             pageBody.classList.add('clock-out');
+            // Play clock-out sound after a brief delay
+            setTimeout(() => playSound('clock-out'), 200);
         }
 
         timeText.textContent = `Hora: ${timeString}`;
@@ -174,9 +223,23 @@
             if (countdown <= 0) {
                 clearInterval(timer);
                 // In kiosk mode, this would close the browser tab or return to home
-                window.history.back();
+                if (window.history.length > 1) {
+                    window.history.back();
+                } else {
+                    window.location.href = '/';
+                }
             }
         }, 1000);
+
+        // Enable audio on any user interaction (required by browsers)
+        ['click', 'touchstart', 'keydown'].forEach(event => {
+            document.addEventListener(event, function() {
+                const audios = document.querySelectorAll('audio');
+                audios.forEach(audio => {
+                    audio.muted = false;
+                });
+            }, { once: true });
+        });
     </script>
 </body>
 </html>
