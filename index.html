@@ -104,6 +104,14 @@
             border: 3px solid white;
             backdrop-filter: blur(10px);
         }
+
+        .audio-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body id="pageBody">
@@ -117,23 +125,108 @@
         <div class="auto-close">Se cierra en <span id="countdown">3</span> segundos</div>
     </div>
 
-    <!-- Audio elements (hidden) -->
-    <audio id="clock-in-sound" preload="auto">
-        <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" type="audio/ogg">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA" type="audio/wav">
-    </audio>
-
-    <audio id="clock-out-sound" preload="auto">
-        <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_short.ogg" type="audio/ogg">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA" type="audio/wav">
-    </audio>
-
-    <audio id="error-sound" preload="auto">
-        <source src="https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg" type="audio/ogg">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA" type="audio/wav">
-    </audio>
+    <div class="audio-indicator" id="audioIndicator">🔊</div>
 
     <script>
+        // Create audio using Web Audio API for better reliability
+        let audioContext;
+        let hasPlayedAudio = false;
+
+        // Initialize audio context
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                return true;
+            } catch (e) {
+                console.log('Web Audio API not supported');
+                return false;
+            }
+        }
+
+        // Play beep sound using Web Audio API
+        function playBeep(frequency = 800, duration = 200, volume = 0.1) {
+            if (!audioContext) {
+                if (!initAudio()) return;
+            }
+
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration / 1000);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration / 1000);
+                
+                hasPlayedAudio = true;
+                document.getElementById('audioIndicator').textContent = '🔊';
+            } catch (e) {
+                console.log('Audio play failed:', e);
+                document.getElementById('audioIndicator').textContent = '🔇';
+            }
+        }
+
+        // Fallback HTML5 audio
+        function playFallbackAudio(type) {
+            try {
+                const audio = new Audio();
+                audio.volume = 0.3;
+                
+                if (type === 'in') {
+                    // Higher frequency for clock in
+                    audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA";
+                } else {
+                    // Lower frequency for clock out
+                    audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA";
+                }
+                
+                audio.play().then(() => {
+                    hasPlayedAudio = true;
+                    document.getElementById('audioIndicator').textContent = '🔊';
+                }).catch(() => {
+                    document.getElementById('audioIndicator').textContent = '🔇';
+                });
+            } catch (e) {
+                console.log('Fallback audio failed:', e);
+                document.getElementById('audioIndicator').textContent = '🔇';
+            }
+        }
+
+        // Combined audio function
+        function playSound(type) {
+            if (type === 'in') {
+                playBeep(880, 300, 0.1); // Higher frequency for clock in
+                setTimeout(() => playFallbackAudio('in'), 50);
+            } else {
+                playBeep(659, 400, 0.1); // Lower frequency for clock out  
+                setTimeout(() => playFallbackAudio('out'), 50);
+            }
+        }
+
+        // Enable audio on page interaction
+        function enableAudio() {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            // Remove event listeners after first interaction
+            document.removeEventListener('click', enableAudio);
+            document.removeEventListener('touchstart', enableAudio);
+            document.removeEventListener('keydown', enableAudio);
+        }
+
+        // Add interaction listeners
+        document.addEventListener('click', enableAudio);
+        document.addEventListener('touchstart', enableAudio);
+        document.addEventListener('keydown', enableAudio);
+
         // Get data from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const employeeId = urlParams.get('employee') || 'DR001';
@@ -159,25 +252,6 @@
 
         const employeeName = employees[employeeId] || 'Empleado';
 
-        // Audio control function
-        function playSound(soundType) {
-            try {
-                const audio = document.getElementById(soundType + '-sound');
-                if (audio) {
-                    audio.volume = 0.3; // Gentle volume for coffee shop
-                    const playPromise = audio.play();
-                    
-                    if (playPromise !== undefined) {
-                        playPromise.catch(error => {
-                            console.log('Audio play failed:', error);
-                        });
-                    }
-                }
-            } catch (e) {
-                console.log('Audio error:', e);
-            }
-        }
-
         // Set current time (24h format, Madrid timezone)
         const now = new Date();
         const timeString = now.toLocaleTimeString('es-ES', {
@@ -199,18 +273,25 @@
             statusText.textContent = 'CLOCK IN';
             welcomeText.textContent = `¡Hola ${employeeName}!`;
             pageBody.classList.add('clock-in');
-            // Play clock-in sound after a brief delay
-            setTimeout(() => playSound('clock-in'), 200);
+            // Play clock-in sound
+            setTimeout(() => {
+                playSound('in');
+            }, 500);
         } else {
             statusIcon.textContent = '👋';
             statusText.textContent = 'CLOCK OUT';
             welcomeText.textContent = `¡Adiós ${employeeName}!`;
             pageBody.classList.add('clock-out');
-            // Play clock-out sound after a brief delay
-            setTimeout(() => playSound('clock-out'), 200);
+            // Play clock-out sound
+            setTimeout(() => {
+                playSound('out');
+            }, 500);
         }
 
         timeText.textContent = `Hora: ${timeString}`;
+
+        // Initialize audio context immediately
+        initAudio();
 
         // Auto-close countdown
         let countdown = 3;
@@ -230,16 +311,6 @@
                 }
             }
         }, 1000);
-
-        // Enable audio on any user interaction (required by browsers)
-        ['click', 'touchstart', 'keydown'].forEach(event => {
-            document.addEventListener(event, function() {
-                const audios = document.querySelectorAll('audio');
-                audios.forEach(audio => {
-                    audio.muted = false;
-                });
-            }, { once: true });
-        });
     </script>
 </body>
 </html>
