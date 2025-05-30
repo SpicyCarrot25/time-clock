@@ -30,7 +30,6 @@
             max-width: 400px;
             width: 90%;
             animation: slideUp 0.5s ease-out;
-            cursor: pointer;
         }
 
         @keyframes slideUp {
@@ -105,51 +104,21 @@
             border: 3px solid white;
             backdrop-filter: blur(10px);
         }
-
-        .tap-prompt {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            font-size: 18px;
-            z-index: 1000;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
-        }
-
-        .hidden {
-            display: none;
-        }
     </style>
 </head>
 <body id="pageBody">
     <div class="logo"></div>
     
-    <!-- Tap prompt overlay -->
-    <div class="tap-prompt" id="tapPrompt">
-        👆 Toca la pantalla para activar sonido
-    </div>
-    
-    <div class="container" id="mainContainer">
+    <div class="container">
         <div class="status-icon" id="statusIcon">⏰</div>
         <div class="status-text" id="statusText">CARGANDO...</div>
         <div class="welcome-text" id="welcomeText">Espere por favor...</div>
         <div class="time-text" id="timeText">--:--</div>
-        <div class="auto-close">Se cierra en <span id="countdown">5</span> segundos</div>
+        <div class="auto-close">Se cierra en <span id="countdown">3</span> segundos</div>
     </div>
 
     <script>
-        let audioEnabled = false;
         let audioContext;
-        let clockStatus = 'in';
 
         // Initialize audio context
         function initAudio() {
@@ -157,14 +126,19 @@
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 return true;
             } catch (e) {
-                console.log('Web Audio API not supported');
+                console.log('Web Audio API not supported, trying HTML5 audio');
                 return false;
             }
         }
 
-        // Play beep sound
-        function playBeep(frequency = 800, duration = 300) {
-            if (!audioContext || !audioEnabled) return;
+        // Play beep using Web Audio API
+        function playBeep(frequency = 800, duration = 300, volume = 0.3) {
+            if (!audioContext) {
+                if (!initAudio()) {
+                    playHTML5Audio(frequency > 800 ? 'high' : 'low');
+                    return;
+                }
+            }
 
             try {
                 const oscillator = audioContext.createOscillator();
@@ -177,45 +151,38 @@
                 oscillator.type = 'sine';
                 
                 gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-                gainNode.gain.linearRampToValueAtTime(0.2, audioContext.currentTime + 0.01);
+                gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
                 gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration / 1000);
                 
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + duration / 1000);
                 
-                console.log('Beep played!');
             } catch (e) {
-                console.log('Audio failed:', e);
+                console.log('Web Audio failed, trying HTML5:', e);
+                playHTML5Audio(frequency > 800 ? 'high' : 'low');
             }
         }
 
-        // Enable audio on user interaction
-        function enableAudio() {
-            if (!audioEnabled) {
-                initAudio();
-                if (audioContext && audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
-                audioEnabled = true;
+        // Fallback HTML5 audio
+        function playHTML5Audio(tone) {
+            try {
+                const audio = new Audio();
+                audio.volume = 0.4;
                 
-                // Hide tap prompt
-                document.getElementById('tapPrompt').classList.add('hidden');
-                
-                // Play the appropriate sound immediately
-                if (clockStatus === 'in') {
-                    playBeep(880, 300); // Higher pitch for clock in
+                // Use data URLs for different tones
+                if (tone === 'high') {
+                    // Higher frequency beep for clock in
+                    audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA";
                 } else {
-                    playBeep(659, 400); // Lower pitch for clock out
+                    // Lower frequency beep for clock out
+                    audio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBDuU2/LTgCwELnzK7+GGRAX9Y7zk4H3AZAAABCgA";
                 }
                 
-                console.log('Audio enabled!');
+                audio.play().catch(e => console.log('HTML5 audio failed:', e));
+            } catch (e) {
+                console.log('All audio methods failed:', e);
             }
         }
-
-        // Add event listeners for user interaction
-        document.addEventListener('click', enableAudio);
-        document.addEventListener('touchstart', enableAudio);
-        document.addEventListener('keydown', enableAudio);
 
         // Get data from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -231,6 +198,7 @@
         };
 
         // Determine clock status
+        let clockStatus = 'in';
         if (status === 'success' && action === 'CLOCK_OUT') {
             clockStatus = 'out';
         } else if (status === 'success' && action === 'CLOCK_IN') {
@@ -262,17 +230,24 @@
             statusText.textContent = 'CLOCK IN';
             welcomeText.textContent = `¡Hola ${employeeName}!`;
             pageBody.classList.add('clock-in');
+            // Play higher frequency for clock in
+            setTimeout(() => playBeep(880, 300, 0.3), 300);
         } else {
             statusIcon.textContent = '👋';
             statusText.textContent = 'CLOCK OUT';
             welcomeText.textContent = `¡Adiós ${employeeName}!`;
             pageBody.classList.add('clock-out');
+            // Play lower frequency for clock out
+            setTimeout(() => playBeep(659, 400, 0.3), 300);
         }
 
         timeText.textContent = `Hora: ${timeString}`;
 
-        // Auto-close countdown (extended to 5 seconds for audio testing)
-        let countdown = 5;
+        // Initialize audio immediately
+        initAudio();
+
+        // Auto-close countdown
+        let countdown = 3;
         const countdownElement = document.getElementById('countdown');
         
         const timer = setInterval(() => {
@@ -288,13 +263,6 @@
                 }
             }
         }, 1000);
-
-        // Auto-hide tap prompt after 3 seconds if no interaction
-        setTimeout(() => {
-            if (!audioEnabled) {
-                document.getElementById('tapPrompt').style.opacity = '0.4';
-            }
-        }, 3000);
     </script>
 </body>
 </html>
