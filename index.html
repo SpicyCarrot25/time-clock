@@ -191,13 +191,6 @@
         const action = urlParams.get('action');
         const nameFromUrl = urlParams.get('name');
         
-        // Employee data fallback
-        const employees = {
-            'DR001': 'Maria',
-            'DR002': 'Francisca', 
-            'DR003': 'Juan'
-        };
-
         // Determine clock status
         let clockStatus = 'in';
         if (status === 'success' && action === 'CLOCK_OUT') {
@@ -208,13 +201,11 @@
             clockStatus = 'out';
         }
 
-        // Use name from URL if available, otherwise use first name from employee data
-        let employeeName;
+        // Use name from URL (from n8n workflow) - no fallbacks to hardcoded names
+        let employeeName = 'Empleado';
         if (nameFromUrl) {
             // Extract first name from full name
             employeeName = nameFromUrl.split(' ')[0];
-        } else {
-            employeeName = employees[employeeId] || 'Empleado';
         }
 
         // Set current time
@@ -264,14 +255,8 @@
             
             if (countdown <= 0) {
                 clearInterval(timer);
-                // Check if we came from PIN page
-                if (document.referrer.includes('/pin')) {
-                    window.location.href = '/pin';
-                } else if (window.history.length > 1) {
-                    window.history.back();
-                } else {
-                    window.location.href = '/';
-                }
+                // ALWAYS redirect to PIN page for PIN method
+                window.location.href = 'https://clock.spicycarrot.xyz/pin';
             }
         }, 1000);
     </script>
