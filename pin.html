@@ -153,66 +153,6 @@
             transform: scale(0.95);
         }
 
-        .qr-scanner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
-            display: none;
-            z-index: 1000;
-        }
-
-        .qr-scanner.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        #qr-video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .qr-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: white;
-            color: #cd202c;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            z-index: 1001;
-        }
-
-        .qr-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 250px;
-            height: 250px;
-            border: 3px solid white;
-            border-radius: 20px;
-            pointer-events: none;
-        }
-
-        .qr-instructions {
-            position: absolute;
-            bottom: 50px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            color: white;
-            font-size: 1.2rem;
-            padding: 0 20px;
-        }
-
         .loading {
             display: none;
             position: fixed;
@@ -306,13 +246,6 @@
         </button>
     </div>
 
-    <div class="qr-scanner" id="qrScanner">
-        <video id="qr-video"></video>
-        <button class="qr-close" id="qrClose">✕</button>
-        <div class="qr-overlay"></div>
-        <div class="qr-instructions">Coloque el código QR dentro del marco</div>
-    </div>
-
     <div class="loading" id="loading">
         <div class="spinner"></div>
     </div>
@@ -332,7 +265,6 @@
 
         // State
         let pin = '';
-        let qrScanner = null;
 
         // Elements
         const pinDisplay = document.getElementById('pinDisplay');
@@ -341,8 +273,6 @@
         const employeeName = document.getElementById('employeeName');
         const loading = document.getElementById('loading');
         const errorMessage = document.getElementById('errorMessage');
-        const qrScannerEl = document.getElementById('qrScanner');
-        const qrVideo = document.getElementById('qr-video');
 
         // Load employees from Supabase
         async function loadEmployees() {
@@ -361,22 +291,12 @@
                     });
                     console.log('Loaded employees:', employees);
                 } else {
-                    console.error('Failed to load employees');
-                    // Fallback to hardcoded names
-                    employees = {
-                        'DR001': 'Maria',
-                        'DR002': 'Francisca',
-                        'DR003': 'Juan'
-                    };
+                    console.error('Failed to load employees, status:', response.status);
+                    showError('Error cargando empleados');
                 }
             } catch (error) {
                 console.error('Error loading employees:', error);
-                // Fallback to hardcoded names
-                employees = {
-                    'DR001': 'Maria',
-                    'DR002': 'Francisca',
-                    'DR003': 'Juan'
-                };
+                showError('Error de conexión al cargar empleados');
             }
         }
 
@@ -412,6 +332,13 @@
                     
                     // Process clock in/out
                     setTimeout(() => processClock(employeeId), 500);
+                } else if (employeeId) {
+                    // Employee ID exists but name not loaded
+                    showError('Empleado no encontrado');
+                    setTimeout(() => {
+                        pin = '';
+                        updatePinDisplay();
+                    }, 1000);
                 } else {
                     showError('PIN incorrecto');
                     setTimeout(() => {
@@ -422,27 +349,15 @@
             }
         }
 
-        // Process clock in/out - SIMPLIFIED: Just redirect directly
-        async function processClock(employeeId) {
+        // Process clock in/out - Direct redirect
+        function processClock(employeeId) {
             loading.classList.add('active');
             
-            try {
-                // Since we know the webhook redirects properly when accessed directly,
-                // just redirect the browser to the webhook URL
-                const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
-                
-                console.log('Redirecting to:', webhookUrl);
-                
-                // Direct redirect - let the browser handle it naturally
-                window.location.href = webhookUrl;
-                
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Error de conexión');
-                pin = '';
-                updatePinDisplay();
-                loading.classList.remove('active');
-            }
+            const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
+            console.log('Redirecting to:', webhookUrl);
+            
+            // Direct redirect - let the browser handle it naturally
+            window.location.href = webhookUrl;
         }
 
         // Show error message
@@ -450,16 +365,6 @@
             errorMessage.textContent = message;
             errorMessage.classList.add('active');
             errorMessage.style.background = '#ff4444';
-            setTimeout(() => {
-                errorMessage.classList.remove('active');
-            }, 3000);
-        }
-
-        // Show success message
-        function showSuccess(message) {
-            errorMessage.textContent = message;
-            errorMessage.classList.add('active');
-            errorMessage.style.background = '#4CAF50';
             setTimeout(() => {
                 errorMessage.classList.remove('active');
             }, 3000);
@@ -479,53 +384,6 @@
                 updatePinDisplay();
             });
         });
-
-        // QR Scanner
-        document.getElementById('qrButton').addEventListener('click', async () => {
-            qrScannerEl.classList.add('active');
-            
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
-                });
-                qrVideo.srcObject = stream;
-                
-                // Initialize QR scanner (you'll need to add a QR library)
-                // For now, this is a placeholder
-                startQRScanning();
-                
-            } catch (error) {
-                console.error('Camera error:', error);
-                showError('No se pudo acceder a la cámara');
-                qrScannerEl.classList.remove('active');
-            }
-        });
-
-        // Close QR scanner
-        document.getElementById('qrClose').addEventListener('click', () => {
-            stopQRScanning();
-            qrScannerEl.classList.remove('active');
-        });
-
-        // QR scanning functions (placeholder - needs QR library)
-        function startQRScanning() {
-            // This would use a library like qr-scanner.js
-            // For now, simulate scanning
-            setTimeout(() => {
-                // Simulate finding a QR code
-                const simulatedQR = 'DR001'; // Would come from actual QR scan
-                stopQRScanning();
-                qrScannerEl.classList.remove('active');
-                processClock(simulatedQR);
-            }, 3000);
-        }
-
-        function stopQRScanning() {
-            if (qrVideo.srcObject) {
-                qrVideo.srcObject.getTracks().forEach(track => track.stop());
-                qrVideo.srcObject = null;
-            }
-        }
 
         // Initialize
         async function init() {
