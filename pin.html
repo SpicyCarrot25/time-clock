@@ -225,9 +225,9 @@
             '1003': 'DR003'
         };
 
-        // State - ALWAYS start with empty PIN
+        // State - FORCE RESET on every page load
         let pin = '';
-        let isProcessing = false; // Prevent multiple processing
+        let isProcessing = false;
 
         // Elements
         const pinDisplay = document.getElementById('pinDisplay');
@@ -236,13 +236,32 @@
         const employeeName = document.getElementById('employeeName');
         const errorMessage = document.getElementById('errorMessage');
 
+        // Force reset display to initial state
+        function forceReset() {
+            console.log('FORCE RESET - clearing all state');
+            pin = '';
+            isProcessing = false;
+            
+            // Force DOM reset
+            placeholder.style.display = 'block';
+            pinDots.style.display = 'none';
+            employeeName.style.display = 'none';
+            
+            // Clear all pin dots
+            const dots = pinDots.querySelectorAll('.pin-dot');
+            dots.forEach(dot => dot.classList.remove('filled'));
+            
+            console.log('Reset complete - PIN:', pin, 'isProcessing:', isProcessing);
+        }
+
         // Update PIN display
         function updatePinDisplay() {
+            console.log('Updating display - PIN:', pin, 'Length:', pin.length, 'isProcessing:', isProcessing);
+            
             if (pin.length === 0) {
                 placeholder.style.display = 'block';
                 pinDots.style.display = 'none';
                 employeeName.style.display = 'none';
-                isProcessing = false; // Reset processing flag
             } else {
                 placeholder.style.display = 'none';
                 pinDots.style.display = 'flex';
@@ -262,45 +281,44 @@
             // Check if PIN is complete and not already processing
             if (pin.length === 4 && !isProcessing) {
                 const employeeId = pinMapping[pin];
+                console.log('PIN complete:', pin, 'Employee ID:', employeeId);
                 
                 if (employeeId) {
-                    isProcessing = true; // Prevent multiple processing
+                    isProcessing = true;
+                    console.log('Starting processing for:', employeeId);
                     
-                    // Show loading state briefly
+                    // Show loading state
                     pinDots.style.display = 'none';
                     employeeName.style.display = 'block';
                     employeeName.textContent = 'Procesando...';
                     
+                    // Set flag to prevent reprocessing after redirect
+                    sessionStorage.setItem('pin_processing', 'true');
+                    
                     // Redirect to webhook
                     setTimeout(() => processClock(employeeId), 500);
                 } else {
+                    console.log('Invalid PIN:', pin);
                     showError('PIN incorrecto');
-                    setTimeout(() => {
-                        pin = '';
-                        updatePinDisplay();
-                    }, 1000);
+                    setTimeout(() => forceReset(), 1000);
                 }
             }
         }
 
         // Process clock in/out
         function processClock(employeeId) {
-            if (isProcessing) {
-                console.log('Processing clock for employee:', employeeId);
-                
-                const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
-                console.log('Redirecting to:', webhookUrl);
+            console.log('Processing clock for employee:', employeeId);
+            
+            const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
+            console.log('Redirecting to:', webhookUrl);
 
-                // Clear PIN before redirect to prevent loops
-                pin = '';
-                
-                // Direct redirect
-                window.location.href = webhookUrl;
-            }
+            // Direct redirect
+            window.location.href = webhookUrl;
         }
 
         // Show error message
         function showError(message) {
+            console.log('Error:', message);
             errorMessage.textContent = message;
             errorMessage.classList.add('active');
             errorMessage.style.background = '#ff4444';
@@ -312,8 +330,11 @@
         // Keypad listeners
         document.querySelectorAll('.key').forEach(key => {
             key.addEventListener('click', (e) => {
-                // Only process key presses if not currently processing
-                if (isProcessing) return;
+                // Block all input if processing
+                if (isProcessing) {
+                    console.log('Blocked key press - currently processing');
+                    return;
+                }
                 
                 const value = e.target.dataset.key;
                 console.log('Key pressed:', value);
@@ -328,11 +349,20 @@
             });
         });
 
-        // Initialize - ALWAYS start fresh
-        console.log('PIN page loaded - starting fresh');
-        pin = ''; // Force clear PIN on load
-        isProcessing = false; // Reset processing flag
-        updatePinDisplay();
+        // Initialize
+        console.log('=== PIN PAGE LOADED ===');
+        
+        // Check if we just returned from processing
+        const wasProcessing = sessionStorage.getItem('pin_processing');
+        if (wasProcessing) {
+            console.log('Detected return from processing - clearing flag');
+            sessionStorage.removeItem('pin_processing');
+        }
+        
+        // ALWAYS force reset on load
+        forceReset();
+        
+        console.log('Initialization complete');
     </script>
 </body>
 </html>
