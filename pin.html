@@ -422,67 +422,25 @@
             }
         }
 
-        // Process clock in/out
+        // Process clock in/out - SIMPLIFIED: Just redirect directly
         async function processClock(employeeId) {
             loading.classList.add('active');
             
             try {
-                // Call n8n webhook
-                const webhookUrl = 'https://n8n.spicycarrot.xyz/webhook/time-clock';
-                const response = await fetch(`${webhookUrl}?employee=${employeeId}&method=PIN`, {
-                    method: 'GET'
-                });
-
-                console.log('Response status:', response.status);
-                console.log('Response headers:', [...response.headers.entries()]);
-
-                // Handle different response scenarios
-                if (response.status === 302) {
-                    // Direct 302 redirect
-                    const location = response.headers.get('Location');
-                    if (location) {
-                        window.location.href = location;
-                        return;
-                    }
-                }
-
-                // Try to parse response body
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    const data = await response.json();
-                    console.log('Response data:', data);
-                    
-                    // Check for redirect in JSON response
-                    if (data.redirect === true && data.location) {
-                        window.location.href = data.location;
-                        return;
-                    }
-                    
-                    // Check for location field directly
-                    if (data.location) {
-                        window.location.href = data.location;
-                        return;
-                    }
-
-                    // Show success message if no redirect
-                    showSuccess(data.message || 'Registro exitoso');
-                } else {
-                    // Non-JSON response, assume success
-                    showSuccess('Registro exitoso');
-                }
-
-                // Reset after 2 seconds if no redirect happened
-                setTimeout(() => {
-                    pin = '';
-                    updatePinDisplay();
-                }, 2000);
+                // Since we know the webhook redirects properly when accessed directly,
+                // just redirect the browser to the webhook URL
+                const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
+                
+                console.log('Redirecting to:', webhookUrl);
+                
+                // Direct redirect - let the browser handle it naturally
+                window.location.href = webhookUrl;
                 
             } catch (error) {
                 console.error('Error:', error);
                 showError('Error de conexión');
                 pin = '';
                 updatePinDisplay();
-            } finally {
                 loading.classList.remove('active');
             }
         }
