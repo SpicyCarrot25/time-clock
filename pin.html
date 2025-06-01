@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dirty Rabbit - PIN Clock</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f2ece1 0%, #ffffff 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #cd202c;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .pin-display {
+            background: white;
+            border: 3px solid #cd202c;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .pin-dots {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .pin-dot {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #cd202c;
+            border-radius: 50%;
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+
+        .pin-dot.filled {
+            background: #cd202c;
+            transform: scale(1.2);
+        }
+
+        .pin-placeholder {
+            color: #999;
+            font-size: 1.2rem;
+        }
+
+        .employee-name {
+            color: #cd202c;
+            font-size: 1.4rem;
+            font-weight: bold;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .key {
+            background: white;
+            border: 2px solid #cd202c;
+            border-radius: 15px;
+            padding: 25px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #cd202c;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .key:active {
+            background: #cd202c;
+            color: white;
+            transform: scale(0.95);
+        }
+
+        .key.delete {
+            grid-column: span 2;
+            background: #f0f0f0;
+        }
+
+        .key.delete:active {
+            background: #999;
+        }
+
+        .qr-button {
+            width: 100%;
+            background: #cd202c;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .qr-button:active {
+            transform: scale(0.95);
+        }
+
+        .qr-scanner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            z-index: 1000;
+        }
+
+        .qr-scanner.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #qr-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .qr-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            color: #cd202c;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .qr-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 3px solid white;
+            border-radius: 20px;
+            pointer-events: none;
+        }
+
+        .qr-instructions {
+            position: absolute;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            padding: 0 20px;
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #cd202c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff4444;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            display: none;
+            z-index: 3000;
+        }
+
+        .error-message.active {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateX(-50%) translateY(-100%); }
+            to { transform: translateX(-50%) translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🐰 Dirty Rabbit</h1>
+            <p>Control de Horario</p>
+        </div>
+
+        <div class="pin-display" id="pinDisplay">
+            <span class="pin-placeholder" id="placeholder">Ingrese su PIN</span>
+            <div class="pin-dots" id="pinDots" style="display: none;">
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+            </div>
+            <div class="employee-name" id="employeeName" style="display: none;"></div>
+        </div>
+
+        <div class="keypad">
+            <button class="key" data-key="1">1</button>
+            <button class="key" data-key="2">2</button>
+            <button class="key" data-key="3">3</button>
+            <button class="key" data-key="4">4</button>
+            <button class="key" data-key="5">5</button>
+            <button class="key" data-key="6">6</button>
+            <button class="key" data-key="7">7</button>
+            <button class="key" data-key="8">8</button>
+            <button class="key" data-key="9">9</button>
+            <button class="key delete" data-key="delete">← Borrar</button>
+            <button class="key" data-key="0">0</button>
+        </div>
+
+        <button class="qr-button" id="qrButton">
+            <span>📷</span>
+            <span>Escanear QR</span>
+        </button>
+    </div>
+
+    <div class="qr-scanner" id="qrScanner">
+        <video id="qr-video"></video>
+        <button class="qr-close" id="qrClose">✕</button>
+        <div class="qr-overlay"></div>
+        <div class="qr-instructions">Coloque el código QR dentro del marco</div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="error-message" id="errorMessage"></div>
+
+    <script>
+        // Employee database
+        const employees = {
+            '1001': { id: 'DR001', name: 'Maria' },
+            '1002': { id: 'DR002', name: 'Francisca' },
+            '1003': { id: 'DR003', name: 'Juan' }
+        };
+
+        // State
+        let pin = '';
+        let qrScanner = null;
+
+        // Elements
+        const pinDisplay = document.getElementById('pinDisplay');
+        const placeholder = document.getElementById('placeholder');
+        const pinDots = document.getElementById('pinDots');
+        const employeeName = document.getElementById('employeeName');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const qrScannerEl = document.getElementById('qrScanner');
+        const qrVideo = document.getElementById('qr-video');
+
+        // Update PIN display
+        function updatePinDisplay() {
+            if (pin.length === 0) {
+                placeholder.style.display = 'block';
+                pinDots.style.display = 'none';
+                employeeName.style.display = 'none';
+            } else {
+                placeholder.style.display = 'none';
+                pinDots.style.display = 'flex';
+                employeeName.style.display = 'none';
+                
+                // Update dots
+                const dots = pinDots.querySelectorAll('.pin-dot');
+                dots.forEach((dot, index) => {
+                    if (index < pin.length) {
+                        dot.classList.add('filled');
+                    } else {
+                        dot.classList.remove('filled');
+                    }
+                });
+            }
+
+            // Check if PIN is complete
+            if (pin.length === 4) {
+                const employee = employees[pin];
+                if (employee) {
+                    pinDots.style.display = 'none';
+                    employeeName.style.display = 'block';
+                    employeeName.textContent = employee.name;
+                    
+                    // Process clock in/out
+                    setTimeout(() => processClock(employee.id), 500);
+                } else {
+                    showError('PIN incorrecto');
+                    setTimeout(() => {
+                        pin = '';
+                        updatePinDisplay();
+                    }, 1000);
+                }
+            }
+        }
+
+        // Process clock in/out
+        async function processClock(employeeId) {
+            loading.classList.add('active');
+            
+            try {
+                // Call your n8n webhook here
+                const webhookUrl = 'YOUR_N8N_WEBHOOK_URL'; // Replace with actual webhook
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        employee_id: employeeId,
+                        action: 'clock',
+                        source: 'pin'
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Redirect to success page
+                const action = data.action || 'CLOCK_IN';
+                window.location.href = `/index.html?employee=${employeeId}&status=success&action=${action}`;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error de conexión');
+                pin = '';
+                updatePinDisplay();
+            } finally {
+                loading.classList.remove('active');
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('active');
+            setTimeout(() => {
+                errorMessage.classList.remove('active');
+            }, 3000);
+        }
+
+        // Keypad listeners
+        document.querySelectorAll('.key').forEach(key => {
+            key.addEventListener('click', (e) => {
+                const value = e.target.dataset.key;
+                
+                if (value === 'delete') {
+                    pin = pin.slice(0, -1);
+                } else if (pin.length < 4) {
+                    pin += value;
+                }
+                
+                updatePinDisplay();
+            });
+        });
+
+        // QR Scanner
+        document.getElementById('qrButton').addEventListener('click', async () => {
+            qrScannerEl.classList.add('active');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                qrVideo.srcObject = stream;
+                
+                // Initialize QR scanner (you'll need to add a QR library)
+                // For now, this is a placeholder
+                startQRScanning();
+                
+            } catch (error) {
+                console.error('Camera error:', error);
+                showError('No se pudo acceder a la cámara');
+                qrScannerEl.classList.remove('active');
+            }
+        });
+
+        // Close QR scanner
+        document.getElementById('qrClose').addEventListener('click', () => {
+            stopQRScanning();
+            qrScannerEl.classList.remove('active');
+        });
+
+        // QR scanning functions (placeholder - needs QR library)
+        function startQRScanning() {
+            // This would use a library like qr-scanner.js
+            // For now, simulate scanning
+            setTimeout(() => {
+                // Simulate finding a QR code
+                const simulatedQR = 'DR001'; // Would come from actual QR scan
+                stopQRScanning();
+                qrScannerEl.classList.remove('active');
+                processClock(simulatedQR);
+            }, 3000);
+        }
+
+        function stopQRScanning() {
+            if (qrVideo.srcObject) {
+                qrVideo.srcObject.getTracks().forEach(track => track.stop());
+                qrVideo.srcObject = null;
+            }
+        }
+
+        // Initialize
+        updatePinDisplay();
+    </script>
+</body>
+</html>
