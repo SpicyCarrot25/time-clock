@@ -175,6 +175,19 @@
             from { transform: translateX(-50%) translateY(-100%); }
             to { transform: translateX(-50%) translateY(0); }
         }
+
+        .debug {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px;
+            font-size: 10px;
+            border-radius: 3px;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
     </style>
 </head>
 <body>
@@ -216,6 +229,7 @@
     </div>
 
     <div class="error-message" id="errorMessage"></div>
+    <div class="debug" id="debugInfo">Debug info will appear here</div>
 
     <script>
         // PIN to employee ID mapping
@@ -234,9 +248,18 @@
         const pinDots = document.getElementById('pinDots');
         const employeeName = document.getElementById('employeeName');
         const errorMessage = document.getElementById('errorMessage');
+        const debugInfo = document.getElementById('debugInfo');
+
+        // Debug function
+        function debug(message) {
+            console.log(message);
+            debugInfo.textContent = message;
+        }
 
         // Update PIN display
         function updatePinDisplay() {
+            debug(`PIN length: ${pin.length}, PIN: ${pin}`);
+            
             if (pin.length === 0) {
                 placeholder.style.display = 'block';
                 pinDots.style.display = 'none';
@@ -259,16 +282,21 @@
 
             // Check if PIN is complete
             if (pin.length === 4) {
+                debug(`PIN complete: ${pin}`);
                 const employeeId = pinMapping[pin];
+                debug(`Employee ID: ${employeeId}`);
+                
                 if (employeeId) {
+                    debug(`Valid employee, processing...`);
                     // Show loading state briefly
                     pinDots.style.display = 'none';
                     employeeName.style.display = 'block';
                     employeeName.textContent = 'Procesando...';
                     
                     // Redirect immediately to webhook
-                    setTimeout(() => processClock(employeeId), 300);
+                    setTimeout(() => processClock(employeeId), 500);
                 } else {
+                    debug(`Invalid PIN: ${pin}`);
                     showError('PIN incorrecto');
                     setTimeout(() => {
                         pin = '';
@@ -280,17 +308,19 @@
 
         // Process clock in/out - Simple direct redirect
         function processClock(employeeId) {
-            console.log('Processing clock for employee:', employeeId);
+            debug(`Processing clock for employee: ${employeeId}`);
             
             const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
-            console.log('Redirecting to:', webhookUrl);
+            debug(`Webhook URL: ${webhookUrl}`);
 
+            debug(`About to redirect...`);
             // Direct redirect - simplest approach
             window.location.href = webhookUrl;
         }
 
         // Show error message
         function showError(message) {
+            debug(`Error: ${message}`);
             errorMessage.textContent = message;
             errorMessage.classList.add('active');
             errorMessage.style.background = '#ff4444';
@@ -303,6 +333,7 @@
         document.querySelectorAll('.key').forEach(key => {
             key.addEventListener('click', (e) => {
                 const value = e.target.dataset.key;
+                debug(`Key pressed: ${value}`);
                 
                 if (value === 'delete') {
                     pin = pin.slice(0, -1);
@@ -315,6 +346,7 @@
         });
 
         // Initialize
+        debug('PIN page loaded');
         updatePinDisplay();
     </script>
 </body>
