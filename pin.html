@@ -240,7 +240,7 @@
         function forceReset() {
             console.log('FORCE RESET - clearing all state');
             pin = '';
-            isProcessing = false;
+            isProcessing = false; // CRITICAL: Reset processing flag
             
             // Force DOM reset
             placeholder.style.display = 'block';
@@ -291,9 +291,6 @@
                     pinDots.style.display = 'none';
                     employeeName.style.display = 'block';
                     employeeName.textContent = 'Procesando...';
-                    
-                    // Set flag to prevent reprocessing after redirect
-                    sessionStorage.setItem('pin_processing', 'true');
                     
                     // Redirect to webhook
                     setTimeout(() => processClock(employeeId), 500);
@@ -349,20 +346,18 @@
             });
         });
 
-        // Initialize
+        // Initialize - ALWAYS force reset regardless of how we got here
         console.log('=== PIN PAGE LOADED ===');
         
-        // Check if we just returned from processing
-        const wasProcessing = sessionStorage.getItem('pin_processing');
-        if (wasProcessing) {
-            console.log('Detected return from processing - clearing flag');
-            sessionStorage.removeItem('pin_processing');
-        }
+        // Clear any sessionStorage flags
+        sessionStorage.removeItem('pin_processing');
         
-        // ALWAYS force reset on load
-        forceReset();
-        
-        console.log('Initialization complete');
+        // FORCE reset with slight delay to ensure DOM is ready
+        setTimeout(() => {
+            console.log('Running delayed force reset...');
+            forceReset();
+            console.log('Initialization complete - ready for input');
+        }, 100);
     </script>
 </body>
 </html>
