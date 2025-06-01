@@ -396,9 +396,9 @@
 
                 const data = await response.json();
                 
-                // Check if it's a display redirect (PIN method should redirect)
-                if (data.redirect_url) {
-                    window.location.href = data.redirect_url;
+                // Check if it's a redirect response
+                if (data.location) {
+                    window.location.href = data.location;
                 } else {
                     // If no redirect, show success and reset
                     showSuccess(data.message || 'Registro exitoso');
