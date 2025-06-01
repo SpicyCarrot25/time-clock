@@ -153,37 +153,6 @@
             transform: scale(0.95);
         }
 
-        .loading {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .loading.active {
-            display: flex;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #cd202c;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         .error-message {
             position: fixed;
             top: 20px;
@@ -205,11 +174,6 @@
         @keyframes slideDown {
             from { transform: translateX(-50%) translateY(-100%); }
             to { transform: translateX(-50%) translateY(0); }
-        }
-
-        /* Hidden redirect form */
-        .redirect-form {
-            display: none;
         }
     </style>
 </head>
@@ -251,22 +215,9 @@
         </button>
     </div>
 
-    <!-- Hidden form for reliable redirect -->
-    <form id="redirectForm" class="redirect-form" method="GET">
-        <input type="hidden" name="employee" id="employeeInput">
-        <input type="hidden" name="method" value="PIN">
-    </form>
-
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-    </div>
-
     <div class="error-message" id="errorMessage"></div>
 
     <script>
-        // Employee database - loaded from Supabase
-        let employees = {};
-        
         // PIN to employee ID mapping
         const pinMapping = {
             '1001': 'DR001',
@@ -282,36 +233,7 @@
         const placeholder = document.getElementById('placeholder');
         const pinDots = document.getElementById('pinDots');
         const employeeName = document.getElementById('employeeName');
-        const loading = document.getElementById('loading');
         const errorMessage = document.getElementById('errorMessage');
-        const redirectForm = document.getElementById('redirectForm');
-        const employeeInput = document.getElementById('employeeInput');
-
-        // Load employees from Supabase
-        async function loadEmployees() {
-            try {
-                const response = await fetch('https://brgvscagofzftmbtakoa.supabase.co/rest/v1/time_employees?select=id,name&is_active=eq.true', {
-                    headers: {
-                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ3ZzY2Fnb2Z6ZnRtYnRha29hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY4OTU0NTIsImV4cCI6MjAzMjQ3MTQ1Mn0.0k-v3wLdaG6C5AQVcKJsRAWDJWZmVwl_HGfEfUpQ9to',
-                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ3ZzY2Fnb2Z6ZnRtYnRha29hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY4OTU0NTIsImV4cCI6MjAzMjQ3MTQ1Mn0.0k-v3wLdaG6C5AQVcKJsRAWDJWZmVwl_HGfEfUpQ9to'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    data.forEach(emp => {
-                        employees[emp.id] = emp.name.split(' ')[0]; // Use first name only
-                    });
-                    console.log('Loaded employees:', employees);
-                } else {
-                    console.error('Failed to load employees, status:', response.status);
-                    showError('Error cargando empleados');
-                }
-            } catch (error) {
-                console.error('Error loading employees:', error);
-                showError('Error de conexión al cargar empleados');
-            }
-        }
 
         // Update PIN display
         function updatePinDisplay() {
@@ -338,20 +260,14 @@
             // Check if PIN is complete
             if (pin.length === 4) {
                 const employeeId = pinMapping[pin];
-                if (employeeId && employees[employeeId]) {
+                if (employeeId) {
+                    // Show loading state briefly
                     pinDots.style.display = 'none';
                     employeeName.style.display = 'block';
-                    employeeName.textContent = employees[employeeId];
+                    employeeName.textContent = 'Procesando...';
                     
-                    // Process clock in/out
-                    setTimeout(() => processClock(employeeId), 500);
-                } else if (employeeId) {
-                    // Employee ID exists but name not loaded
-                    showError('Empleado no encontrado');
-                    setTimeout(() => {
-                        pin = '';
-                        updatePinDisplay();
-                    }, 1000);
+                    // Redirect immediately to webhook
+                    setTimeout(() => processClock(employeeId), 300);
                 } else {
                     showError('PIN incorrecto');
                     setTimeout(() => {
@@ -362,41 +278,15 @@
             }
         }
 
-        // Process clock in/out - Multiple redirect approaches
+        // Process clock in/out - Simple direct redirect
         function processClock(employeeId) {
             console.log('Processing clock for employee:', employeeId);
             
             const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
-            console.log('Webhook URL:', webhookUrl);
+            console.log('Redirecting to:', webhookUrl);
 
-            // Method 1: Form submission (most reliable for redirects)
-            try {
-                redirectForm.action = 'https://n8n.spicycarrot.xyz/webhook/time-clock';
-                employeeInput.value = employeeId;
-                console.log('Submitting form...');
-                redirectForm.submit();
-                return;
-            } catch (error) {
-                console.error('Form submit failed:', error);
-            }
-
-            // Method 2: Window location (fallback)
-            try {
-                console.log('Trying window.location.href...');
-                window.location.href = webhookUrl;
-                return;
-            } catch (error) {
-                console.error('Window location failed:', error);
-            }
-
-            // Method 3: Window replace (last resort)
-            try {
-                console.log('Trying window.location.replace...');
-                window.location.replace(webhookUrl);
-            } catch (error) {
-                console.error('All redirect methods failed:', error);
-                showError('Error de redirección');
-            }
+            // Direct redirect - simplest approach
+            window.location.href = webhookUrl;
         }
 
         // Show error message
@@ -425,12 +315,7 @@
         });
 
         // Initialize
-        async function init() {
-            await loadEmployees();
-            updatePinDisplay();
-        }
-        
-        init();
+        updatePinDisplay();
     </script>
 </body>
 </html>
