@@ -135,9 +135,18 @@
     </div>
 
     <script>
+        // FORCE CLEAR PIN ON PAGE LOAD
         let pin = '';
+        
+        // Clear any stored state
+        window.onload = function() {
+            pin = '';
+            updateDisplay();
+            console.log('Page loaded - PIN cleared:', pin);
+        };
 
         function addDigit(digit) {
+            console.log('Adding digit:', digit, 'Current PIN:', pin);
             if (pin.length < 4) {
                 pin += digit;
                 updateDisplay();
@@ -151,6 +160,7 @@
         function clearPin() {
             pin = '';
             updateDisplay();
+            console.log('PIN manually cleared');
         }
 
         function updateDisplay() {
@@ -160,9 +170,12 @@
             } else {
                 display.textContent = '●'.repeat(pin.length) + '○'.repeat(4 - pin.length);
             }
+            console.log('Display updated - PIN length:', pin.length);
         }
 
         function processPin() {
+            console.log('Processing PIN:', pin);
+            
             // Map PINs to employee IDs
             const pinToEmployee = {
                 '1001': 'DR001',
@@ -178,6 +191,7 @@
                 
                 // Redirect to webhook
                 const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
+                console.log('Redirecting to:', webhookUrl);
                 window.location.href = webhookUrl;
             } else {
                 // Invalid PIN
@@ -188,7 +202,7 @@
             }
         }
 
-        // Initialize display
+        // Initialize display immediately
         updateDisplay();
     </script>
 </body>
