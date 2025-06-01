@@ -391,17 +391,38 @@
                 // Call n8n webhook
                 const webhookUrl = 'https://n8n.spicycarrot.xyz/webhook/time-clock';
                 const response = await fetch(`${webhookUrl}?employee=${employeeId}&method=PIN`, {
-                    method: 'GET'
+                    method: 'GET',
+                    redirect: 'manual'  // Don't follow redirects automatically
                 });
 
-                const data = await response.json();
-                
-                // Check if it's a redirect response
-                if (data.location) {
-                    window.location.href = data.location;
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+
+                // Check if it's a redirect (302 status)
+                if (response.status === 302) {
+                    const location = response.headers.get('Location');
+                    if (location) {
+                        window.location.href = location;
+                        return;
+                    }
+                }
+
+                // If not a redirect, try to parse JSON
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    const data = await response.json();
+                    
+                    if (data.location) {
+                        window.location.href = data.location;
+                    } else {
+                        showSuccess(data.message || 'Registro exitoso');
+                        setTimeout(() => {
+                            pin = '';
+                            updatePinDisplay();
+                        }, 2000);
+                    }
                 } else {
-                    // If no redirect, show success and reset
-                    showSuccess(data.message || 'Registro exitoso');
+                    // No JSON content, assume success
+                    showSuccess('Registro exitoso');
                     setTimeout(() => {
                         pin = '';
                         updatePinDisplay();
