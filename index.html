@@ -255,8 +255,8 @@
             
             if (countdown <= 0) {
                 clearInterval(timer);
-                // ALWAYS redirect to PIN page for PIN method
-                window.location.href = 'https://clock.spicycarrot.xyz/pin';
+                // Force complete page reload to clear any JavaScript state
+                window.location.replace('https://clock.spicycarrot.xyz/pin');
             }
         }, 1000);
     </script>
