@@ -2,14 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dirty Rabbit - PIN Clock</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dirty Rabbit - Clock In/Out</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -19,81 +18,41 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            flex-direction: column;
         }
 
         .container {
-            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(205, 32, 44, 0.1);
+            border: 3px solid #cd202c;
             max-width: 400px;
-            padding: 20px;
+            width: 90%;
+            text-align: center;
         }
 
         .logo {
-            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #cd202c;
             margin-bottom: 30px;
         }
 
-        .logo h1 {
-            color: #cd202c;
-            font-size: 2rem;
-            font-weight: bold;
-        }
-
-        .logo p {
-            color: #666;
-            font-size: 0.9rem;
-            margin-top: 5px;
-        }
-
         .pin-display {
-            background: white;
-            border: 3px solid #cd202c;
-            border-radius: 15px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
             padding: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-            min-height: 80px;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 10px;
+            min-height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
-        }
-
-        .pin-dots {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        .pin-dot {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #cd202c;
-            border-radius: 50%;
-            background: transparent;
-            transition: all 0.3s ease;
-        }
-
-        .pin-dot.filled {
-            background: #cd202c;
-            transform: scale(1.2);
-        }
-
-        .pin-placeholder {
-            color: #999;
-            font-size: 1.2rem;
-        }
-
-        .employee-name {
-            color: #cd202c;
-            font-size: 1.4rem;
-            font-weight: bold;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            color: #333;
         }
 
         .keypad {
@@ -104,255 +63,148 @@
         }
 
         .key {
-            background: white;
+            background: #f8f9fa;
             border: 2px solid #cd202c;
-            border-radius: 15px;
-            padding: 25px;
-            font-size: 1.8rem;
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 1.5rem;
             font-weight: bold;
             color: #cd202c;
             cursor: pointer;
             transition: all 0.2s ease;
             user-select: none;
-            -webkit-user-select: none;
+        }
+
+        .key:hover {
+            background: #cd202c;
+            color: white;
+            transform: translateY(-2px);
         }
 
         .key:active {
-            background: #cd202c;
-            color: white;
-            transform: scale(0.95);
+            transform: translateY(0);
         }
 
-        .key.delete {
+        .key.zero {
             grid-column: span 2;
-            background: #f0f0f0;
         }
 
-        .key.delete:active {
-            background: #999;
-        }
-
-        .qr-button {
-            width: 100%;
-            background: #cd202c;
+        .clear-btn {
+            background: #6c757d;
+            border: 2px solid #6c757d;
             color: white;
-            border: none;
-            border-radius: 15px;
-            padding: 20px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
         }
 
-        .qr-button:active {
-            transform: scale(0.95);
+        .clear-btn:hover {
+            background: #5a6268;
+            border-color: #5a6268;
         }
 
-        .error-message {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ff4444;
+        .instructions {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+
+        .processing {
+            background: #28a745;
             color: white;
-            padding: 15px 30px;
-            border-radius: 10px;
-            display: none;
-            z-index: 3000;
+            border-color: #28a745;
+            font-size: 1.1rem;
         }
 
-        .error-message.active {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from { transform: translateX(-50%) translateY(-100%); }
-            to { transform: translateX(-50%) translateY(0); }
+        .processing .pin-display {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: white;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">
-            <h1>🐰 Dirty Rabbit</h1>
-            <p>Control de Horario</p>
-        </div>
-
+    <div class="container" id="container">
+        <div class="logo">🐰 DIRTY RABBIT</div>
+        
         <div class="pin-display" id="pinDisplay">
-            <span class="pin-placeholder" id="placeholder">Ingrese su PIN</span>
-            <div class="pin-dots" id="pinDots" style="display: none;">
-                <div class="pin-dot"></div>
-                <div class="pin-dot"></div>
-                <div class="pin-dot"></div>
-                <div class="pin-dot"></div>
-            </div>
-            <div class="employee-name" id="employeeName" style="display: none;"></div>
+            Introduce tu PIN
         </div>
 
-        <div class="keypad">
-            <button class="key" data-key="1">1</button>
-            <button class="key" data-key="2">2</button>
-            <button class="key" data-key="3">3</button>
-            <button class="key" data-key="4">4</button>
-            <button class="key" data-key="5">5</button>
-            <button class="key" data-key="6">6</button>
-            <button class="key" data-key="7">7</button>
-            <button class="key" data-key="8">8</button>
-            <button class="key" data-key="9">9</button>
-            <button class="key delete" data-key="delete">← Borrar</button>
-            <button class="key" data-key="0">0</button>
+        <div class="keypad" id="keypad">
+            <div class="key" onclick="addDigit('1')">1</div>
+            <div class="key" onclick="addDigit('2')">2</div>
+            <div class="key" onclick="addDigit('3')">3</div>
+            <div class="key" onclick="addDigit('4')">4</div>
+            <div class="key" onclick="addDigit('5')">5</div>
+            <div class="key" onclick="addDigit('6')">6</div>
+            <div class="key" onclick="addDigit('7')">7</div>
+            <div class="key" onclick="addDigit('8')">8</div>
+            <div class="key" onclick="addDigit('9')">9</div>
+            <div class="key clear-btn" onclick="clearPin()">C</div>
+            <div class="key zero" onclick="addDigit('0')">0</div>
         </div>
 
-        <button class="qr-button" id="qrButton">
-            <span>📷</span>
-            <span>Escanear QR</span>
-        </button>
+        <div class="instructions">
+            Introduce tu PIN de 4 dígitos
+        </div>
     </div>
 
-    <div class="error-message" id="errorMessage"></div>
-
     <script>
-        // PIN to employee ID mapping
-        const pinMapping = {
-            '1001': 'DR001',
-            '1002': 'DR002', 
-            '1003': 'DR003'
-        };
+        let pin = '';
 
-        // Elements
-        const pinDisplay = document.getElementById('pinDisplay');
-        const placeholder = document.getElementById('placeholder');
-        const pinDots = document.getElementById('pinDots');
-        const employeeName = document.getElementById('employeeName');
-        const errorMessage = document.getElementById('errorMessage');
+        function addDigit(digit) {
+            if (pin.length < 4) {
+                pin += digit;
+                updateDisplay();
+                
+                if (pin.length === 4) {
+                    processPin();
+                }
+            }
+        }
 
-        // Global state object - recreated fresh each time
-        const state = {
-            pin: '',
-            isProcessing: false
-        };
+        function clearPin() {
+            pin = '';
+            updateDisplay();
+        }
 
-        // Update PIN display
-        function updatePinDisplay() {
-            console.log('Updating display - PIN:', state.pin, 'Length:', state.pin.length, 'isProcessing:', state.isProcessing);
-            
-            if (state.pin.length === 0) {
-                placeholder.style.display = 'block';
-                pinDots.style.display = 'none';
-                employeeName.style.display = 'none';
+        function updateDisplay() {
+            const display = document.getElementById('pinDisplay');
+            if (pin.length === 0) {
+                display.textContent = 'Introduce tu PIN';
             } else {
-                placeholder.style.display = 'none';
-                pinDots.style.display = 'flex';
-                employeeName.style.display = 'none';
-                
-                // Update dots
-                const dots = pinDots.querySelectorAll('.pin-dot');
-                dots.forEach((dot, index) => {
-                    if (index < state.pin.length) {
-                        dot.classList.add('filled');
-                    } else {
-                        dot.classList.remove('filled');
-                    }
-                });
-            }
-
-            // Check if PIN is complete and not already processing
-            if (state.pin.length === 4 && !state.isProcessing) {
-                const employeeId = pinMapping[state.pin];
-                console.log('PIN complete:', state.pin, 'Employee ID:', employeeId);
-                
-                if (employeeId) {
-                    state.isProcessing = true;
-                    console.log('Starting processing for:', employeeId);
-                    
-                    // Show loading state
-                    pinDots.style.display = 'none';
-                    employeeName.style.display = 'block';
-                    employeeName.textContent = 'Procesando...';
-                    
-                    // Redirect to webhook
-                    setTimeout(() => processClock(employeeId), 500);
-                } else {
-                    console.log('Invalid PIN:', state.pin);
-                    showError('PIN incorrecto');
-                    setTimeout(() => resetState(), 1000);
-                }
+                display.textContent = '●'.repeat(pin.length) + '○'.repeat(4 - pin.length);
             }
         }
 
-        // Reset state completely
-        function resetState() {
-            console.log('Resetting state completely');
-            state.pin = '';
-            state.isProcessing = false;
+        function processPin() {
+            // Map PINs to employee IDs
+            const pinToEmployee = {
+                '1001': 'DR001',
+                '1002': 'DR002', 
+                '1003': 'DR003'
+            };
+
+            const employeeId = pinToEmployee[pin];
             
-            // Reset DOM
-            placeholder.style.display = 'block';
-            pinDots.style.display = 'none';
-            employeeName.style.display = 'none';
-            
-            // Clear all pin dots
-            const dots = pinDots.querySelectorAll('.pin-dot');
-            dots.forEach(dot => dot.classList.remove('filled'));
-            
-            console.log('State reset - PIN:', state.pin, 'isProcessing:', state.isProcessing);
+            if (employeeId) {
+                // Show processing state
+                document.getElementById('container').classList.add('processing');
+                document.getElementById('pinDisplay').textContent = 'Procesando...';
+                document.getElementById('keypad').style.display = 'none';
+                
+                // Redirect to webhook
+                const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
+                window.location.href = webhookUrl;
+            } else {
+                // Invalid PIN
+                document.getElementById('pinDisplay').textContent = 'PIN incorrecto';
+                setTimeout(() => {
+                    clearPin();
+                }, 1500);
+            }
         }
 
-        // Process clock in/out
-        function processClock(employeeId) {
-            console.log('Processing clock for employee:', employeeId);
-            
-            const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
-            console.log('Redirecting to:', webhookUrl);
-
-            // Direct redirect
-            window.location.href = webhookUrl;
-        }
-
-        // Show error message
-        function showError(message) {
-            console.log('Error:', message);
-            errorMessage.textContent = message;
-            errorMessage.classList.add('active');
-            errorMessage.style.background = '#ff4444';
-            setTimeout(() => {
-                errorMessage.classList.remove('active');
-            }, 3000);
-        }
-
-        // Keypad listeners
-        document.querySelectorAll('.key').forEach(key => {
-            key.addEventListener('click', (e) => {
-                console.log('Key clicked:', e.target.dataset.key, 'Current state:', state);
-                
-                // NEVER block input - always allow key presses
-                const value = e.target.dataset.key;
-                console.log('Processing key press:', value);
-                
-                if (value === 'delete') {
-                    state.pin = state.pin.slice(0, -1);
-                } else if (state.pin.length < 4) {
-                    state.pin += value;
-                }
-                
-                updatePinDisplay();
-            });
-        });
-
-        // Initialize - Simple and clean
-        console.log('=== PIN PAGE LOADED ===');
-        console.log('Initial state:', state);
-        
-        // Just reset and display
-        resetState();
-        
-        console.log('Initialization complete - ready for input');
+        // Initialize display
+        updateDisplay();
     </script>
 </body>
 </html>
