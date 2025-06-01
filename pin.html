@@ -105,30 +105,17 @@
             font-size: 0.9rem;
             margin-top: 20px;
         }
-
-        .processing {
-            background: #28a745;
-            color: white;
-            border-color: #28a745;
-            font-size: 1.1rem;
-        }
-
-        .processing .pin-display {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.3);
-            color: white;
-        }
     </style>
 </head>
 <body>
-    <div class="container" id="container">
+    <div class="container">
         <div class="logo">🐰 DIRTY RABBIT</div>
         
         <div class="pin-display" id="pinDisplay">
             Introduce tu PIN
         </div>
 
-        <div class="keypad" id="keypad">
+        <div class="keypad">
             <div class="key" onclick="addDigit('1')">1</div>
             <div class="key" onclick="addDigit('2')">2</div>
             <div class="key" onclick="addDigit('3')">3</div>
@@ -187,9 +174,7 @@
             
             if (employeeId) {
                 // Show processing state
-                document.getElementById('container').classList.add('processing');
                 document.getElementById('pinDisplay').textContent = 'Procesando...';
-                document.getElementById('keypad').style.display = 'none';
                 
                 // Redirect to webhook
                 const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
