@@ -206,6 +206,11 @@
             from { transform: translateX(-50%) translateY(-100%); }
             to { transform: translateX(-50%) translateY(0); }
         }
+
+        /* Hidden redirect form */
+        .redirect-form {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -246,6 +251,12 @@
         </button>
     </div>
 
+    <!-- Hidden form for reliable redirect -->
+    <form id="redirectForm" class="redirect-form" method="GET">
+        <input type="hidden" name="employee" id="employeeInput">
+        <input type="hidden" name="method" value="PIN">
+    </form>
+
     <div class="loading" id="loading">
         <div class="spinner"></div>
     </div>
@@ -273,6 +284,8 @@
         const employeeName = document.getElementById('employeeName');
         const loading = document.getElementById('loading');
         const errorMessage = document.getElementById('errorMessage');
+        const redirectForm = document.getElementById('redirectForm');
+        const employeeInput = document.getElementById('employeeInput');
 
         // Load employees from Supabase
         async function loadEmployees() {
@@ -349,15 +362,41 @@
             }
         }
 
-        // Process clock in/out - Direct redirect
+        // Process clock in/out - Multiple redirect approaches
         function processClock(employeeId) {
-            loading.classList.add('active');
+            console.log('Processing clock for employee:', employeeId);
             
             const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
-            console.log('Redirecting to:', webhookUrl);
-            
-            // Direct redirect - let the browser handle it naturally
-            window.location.href = webhookUrl;
+            console.log('Webhook URL:', webhookUrl);
+
+            // Method 1: Form submission (most reliable for redirects)
+            try {
+                redirectForm.action = 'https://n8n.spicycarrot.xyz/webhook/time-clock';
+                employeeInput.value = employeeId;
+                console.log('Submitting form...');
+                redirectForm.submit();
+                return;
+            } catch (error) {
+                console.error('Form submit failed:', error);
+            }
+
+            // Method 2: Window location (fallback)
+            try {
+                console.log('Trying window.location.href...');
+                window.location.href = webhookUrl;
+                return;
+            } catch (error) {
+                console.error('Window location failed:', error);
+            }
+
+            // Method 3: Window replace (last resort)
+            try {
+                console.log('Trying window.location.replace...');
+                window.location.replace(webhookUrl);
+            } catch (error) {
+                console.error('All redirect methods failed:', error);
+                showError('Error de redirección');
+            }
         }
 
         // Show error message
