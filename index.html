@@ -189,8 +189,9 @@
         const employeeId = urlParams.get('employee') || 'DR001';
         const status = urlParams.get('status');
         const action = urlParams.get('action');
+        const nameFromUrl = urlParams.get('name');
         
-        // Employee data
+        // Employee data fallback
         const employees = {
             'DR001': 'Maria',
             'DR002': 'Francisca', 
@@ -207,7 +208,14 @@
             clockStatus = 'out';
         }
 
-        const employeeName = employees[employeeId] || 'Empleado';
+        // Use name from URL if available, otherwise use first name from employee data
+        let employeeName;
+        if (nameFromUrl) {
+            // Extract first name from full name
+            employeeName = nameFromUrl.split(' ')[0];
+        } else {
+            employeeName = employees[employeeId] || 'Empleado';
+        }
 
         // Set current time
         const now = new Date();
@@ -256,7 +264,10 @@
             
             if (countdown <= 0) {
                 clearInterval(timer);
-                if (window.history.length > 1) {
+                // Check if we came from PIN page
+                if (document.referrer.includes('/pin')) {
+                    window.location.href = '/pin';
+                } else if (window.history.length > 1) {
                     window.history.back();
                 } else {
                     window.location.href = '/';
