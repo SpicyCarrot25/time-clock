@@ -184,6 +184,24 @@
             }
         }
 
+        // Function to extract first name from Spanish format "SURNAME, FIRST NAME"
+        function getFirstName(fullName) {
+            if (!fullName) return 'Empleado';
+            
+            // Handle Spanish format: "CANALIS, MARIA DE LOS MILAGROS" -> "MARIA"
+            if (fullName.includes(',')) {
+                const parts = fullName.split(',');
+                if (parts.length >= 2) {
+                    const firstNamePart = parts[1].trim();
+                    // Take only the first word after comma
+                    return firstNamePart.split(' ')[0];
+                }
+            }
+            
+            // Fallback: take first word if no comma
+            return fullName.split(' ')[0];
+        }
+
         // Get data from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const employeeId = urlParams.get('employee') || 'DR001';
@@ -201,11 +219,11 @@
             clockStatus = 'out';
         }
 
-        // Use name from URL (from n8n workflow) - no fallbacks to hardcoded names
+        // Use name from URL (from n8n workflow) - now with proper first name extraction
         let employeeName = 'Empleado';
         if (nameFromUrl) {
-            // Extract first name from full name
-            employeeName = nameFromUrl.split(' ')[0];
+            // Extract first name using the new function
+            employeeName = getFirstName(nameFromUrl);
         }
 
         // Set current time
