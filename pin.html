@@ -138,10 +138,29 @@
         // FORCE CLEAR PIN ON PAGE LOAD
         let pin = '';
         
-        // Clear any stored state
+        // Check for error parameter when page loads
         window.onload = function() {
             pin = '';
-            updateDisplay();
+            
+            // Check if there's an error in the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('error') === 'incorrect') {
+                const display = document.getElementById('pinDisplay');
+                display.textContent = 'PIN incorrecto';
+                display.style.color = '#f44336';
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    display.textContent = 'Introduce tu PIN';
+                    display.style.color = '#333';
+                    
+                    // Clean the URL to remove the error parameter
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }, 2000);
+            } else {
+                updateDisplay();
+            }
+            
             console.log('Page loaded - PIN cleared:', pin);
         };
 
