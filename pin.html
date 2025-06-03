@@ -176,30 +176,13 @@
         function processPin() {
             console.log('Processing PIN:', pin);
             
-            // Map PINs to employee IDs
-            const pinToEmployee = {
-                '1001': 'DR001',
-                '1002': 'DR002', 
-                '1003': 'DR003'
-            };
-
-            const employeeId = pinToEmployee[pin];
+            // Show processing state
+            document.getElementById('pinDisplay').textContent = 'Procesando...';
             
-            if (employeeId) {
-                // Show processing state
-                document.getElementById('pinDisplay').textContent = 'Procesando...';
-                
-                // Redirect to webhook
-                const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?employee=${employeeId}&method=PIN`;
-                console.log('Redirecting to:', webhookUrl);
-                window.location.href = webhookUrl;
-            } else {
-                // Invalid PIN
-                document.getElementById('pinDisplay').textContent = 'PIN incorrecto';
-                setTimeout(() => {
-                    clearPin();
-                }, 1500);
-            }
+            // Dynamic PIN lookup - no hardcoded employee mappings
+            const webhookUrl = `https://n8n.spicycarrot.xyz/webhook/time-clock?pin=${pin}&method=PIN`;
+            console.log('Redirecting to:', webhookUrl);
+            window.location.href = webhookUrl;
         }
 
         // Initialize display immediately
